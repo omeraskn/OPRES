@@ -72,23 +72,44 @@ class DersProgramiUI(QWidget):
         QMessageBox.information(self, "Başarılı", f"Çizelge {dosya_adi} dosyasına kaydedildi.")
 
     def cizelgeyi_excele_yaz(self, cizelge, dosya_adi=r"C:\Users\omera\Desktop\OPRES\data\curriculum.xlsx"):
-        df = pd.DataFrame(cizelge)
-        df["Saat"] = df["saat"].apply(lambda x: f"{x}:00-{x + 1}:00")
+        writer = pd.ExcelWriter(dosya_adi, engine='xlsxwriter')
+        workbook = writer.book
 
-        # Pazartesi-Cuma ve 09:00-20:00 saat aralığını oluştur
-        saat_araligi = [f"{h}:00-{h + 1}:00" for h in range(9, 21)]
-        gunler = ["Pazartesi", "Salı", "Çarşamba", "Perşembe", "Cuma"]
-        df_pivot = pd.DataFrame(index=saat_araligi, columns=gunler).fillna("Boş")
+        saat_araligi = [f"{h}:00-{h + 1}:00" for h in range(9, 17)]  # Saat aralığı
+        gunler = ["Pazartesi", "Salı", "Çarşamba", "Perşembe", "Cuma"]  # Günler
 
-        for _, row in df.iterrows():
-            gun = row.get("gun", "Boş")
-            saat = row["Saat"]
-            ders_kodu = row["ders_kodu"]
-            if gun in df_pivot.columns and saat in df_pivot.index:
-                df_pivot.loc[saat, gun] = ders_kodu
+        for sinif in range(1, 5):
+            # Her sınıf için ayrı filtreleme
+            sinif_cizelgesi = [row for row in cizelge if row["sinif"] == sinif]
 
-        df_pivot.to_excel(dosya_adi)
+            # Eğer bu sınıf için çizelge yoksa sayfayı boş bırak
+            if not sinif_cizelgesi:
+                continue
+
+            # Boş bir pivot tablo oluştur
+            df_pivot = pd.DataFrame(index=saat_araligi, columns=gunler).fillna("")
+
+            for row in sinif_cizelgesi:
+                saat_index = f"{row['saat']}:00-{row['saat'] + 1}:00"
+                ders_bilgisi = (
+                    f"{row['ders_kodu']}\n"
+                    f"{row['derslik']}\n"
+                    f"{row['ogretmen']}"
+                )
+                if row["gun"] in df_pivot.columns and saat_index in df_pivot.index:
+                    df_pivot.loc[saat_index, row["gun"]] = ders_bilgisi
+
+            # Excel sayfasına pivot tabloyu yaz
+            df_pivot.to_excel(writer, sheet_name=f"{sinif}. Sınıf")
+            worksheet = writer.sheets[f"{sinif}. Sınıf"]
+
+            # Hücre formatlarını ayarla
+            cell_format = workbook.add_format({'text_wrap': True, 'align': 'center', 'valign': 'vcenter'})
+            worksheet.set_column('B:F', 20, cell_format)  # Sütun genişliğini ayarla
+
+        writer.close()
         print(f"{dosya_adi} dosyasına yazıldı.")
+
 
 if __name__ == '__main__':
     app = QApplication(sys.argv)

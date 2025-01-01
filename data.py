@@ -11,8 +11,8 @@ dersler = [
     {"kod": "BLM2041", "online": 1, "sinif": 2, "saat": 2},
     {"kod": "BLM2521", "online": 0, "sinif": 2, "saat": 2},
     {"kod": "BLM2611", "online": 0, "sinif": 2, "saat": 3},
-
-
+    {"kod": "BLM3730", "online": 0, "sinif": 3, "saat": 3},
+    {"kod": "BLM4011", "online": 0, "sinif": 4, "saat": 3},
 ]
 
 # Öğretmenler
@@ -31,7 +31,7 @@ ogretmenler = [
     {"isim": "Utku Kalaycı", "verdigi_dersler": ["BLM3041", "BLM3780"], "calisma_gunleri": ["Pazartesi", "Çarşamba"]},
     {"isim": "Furkan Çakmak", "verdigi_dersler": ["BLM3061", "BLM2012"], "calisma_gunleri": ["Salı", "Çarşamba"]},
     {"isim": "Hilal Tufan", "verdigi_dersler": ["TDB1031"], "calisma_gunleri": ["Pazartesi", "Cuma"]},
-
+    {"isim": "Ali Gökhan Yavuz", "verdigi_dersler": ["BLM4011"], "calisma_gunleri": ["Pazartesi", "Salı", "Cuma"]},
 ]
 
 # Derslikler
@@ -44,4 +44,5 @@ derslikler = [
     {"kod": "D107", "kapasite": 50},
     {"kod": "D106", "kapasite": 50},
     {"kod": "DB11", "kapasite": 70},
+    {"kod": "ZOOM", "kapasite": 1000},
 ]
