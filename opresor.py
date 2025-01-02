@@ -103,6 +103,7 @@ def ders_cizelgele():
                     "gun": gunler[l],
                     "saat": saatler[m],
                     "sinif": dersler[i]["sinif"],
+                    "ders":dersler[i].get("ders","")
                 })
         return cizelge
     else:
