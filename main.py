@@ -1,4 +1,5 @@
 import sys
+import random
 from PyQt5.QtWidgets import (
     QApplication, QWidget, QVBoxLayout, QFormLayout, QLineEdit, QPushButton, QLabel, QMessageBox, QComboBox
 )
@@ -49,7 +50,7 @@ class DersProgramiUI(QWidget):
         ders_adi = self.ders_adi_edit.text()
         ders_suresi = self.ders_suresi_edit.text()
         ders_sinifi = self.ders_sinif_combo.currentText()
-        self.dersler.append({"kod": ders_adi, "online": 0, "sinif": int(ders_sinifi), "saat": int(ders_suresi)})
+        self.dersler.append({"kod": ders_adi, "online": 0, "sinif": int(ders_sinifi), "sure": int(ders_suresi)})
         self.dersler_text_area.setText(f"Dersler: {', '.join([d['kod'] for d in self.dersler])}")
         self.ders_adi_edit.clear()
         self.ders_suresi_edit.clear()
@@ -71,44 +72,81 @@ class DersProgramiUI(QWidget):
         self.cizelgeyi_excele_yaz(self.cizelge, dosya_adi)
         QMessageBox.information(self, "Başarılı", f"Çizelge {dosya_adi} dosyasına kaydedildi.")
 
+
     def cizelgeyi_excele_yaz(self, cizelge, dosya_adi=r"C:\Users\omera\Desktop\OPRES\data\curriculum.xlsx"):
+        ders_programi = {}
+
+        renkler = [
+            '#FFD1DC', '#C5CAE9', '#FF9AA2', '#B3E5FC', '#98F6DA',
+            '#D5D387', '#DCE775', '#FF4B65', '#80CBC4', '#8CA8F5',
+            '#D1C4E9', '#FFB7B2', '#A69079', '#CAB6B6', '#B2DFDB',
+            '#8FF792', '#957A68', '#FFF9C4', '#81D4FA', '#FFE0B2',
+            '#FFCCBC', '#D7CCC8', '#F5F5F5', '#E0E0E0', '#CFD8DC',
+            '#E1BEE7', '#FFAB91', '#FFCC80', '#CEC7C8', '#FFEB3B',
+            '#FF3A59', '#A5D6A7', '#FFECB3', '#CE93D8', '#FF8A80'
+        ]
+        renk_index = 0
+
+        for ders in cizelge:
+            sinif = ders['sinif']
+            gun = ders['gun']
+            saat = ders['saat']
+            sure = ders['sure']
+
+            if sinif not in ders_programi:
+                ders_programi[sinif] = {}
+            if gun not in ders_programi[sinif]:
+                ders_programi[sinif][gun] = {}
+            if saat not in ders_programi[sinif][gun]:
+                ders_programi[sinif][gun][saat] = []
+
+            ders_programi[sinif][gun][saat].append(ders)
+
         writer = pd.ExcelWriter(dosya_adi, engine='xlsxwriter')
         workbook = writer.book
+        saat_araligi = [f"{h}:00" for h in range(9, 17)]
 
-        saat_araligi = [f"{h}:00-{h + 1}:00" for h in range(9, 17)]  # Saat aralığı
-        gunler = ["Pazartesi", "Salı", "Çarşamba", "Perşembe", "Cuma"]  # Günler
+        for sinif, sinif_dersler in ders_programi.items():
+            worksheet = workbook.add_worksheet(f"Sınıf {sinif}")
+            writer.sheets[f"Sınıf {sinif}"] = worksheet
 
-        for sinif in range(1, 5):
-            # Her sınıf için ayrı filtreleme
-            sinif_cizelgesi = [row for row in cizelge if row["sinif"] == sinif]
+            # Sütun başlıkları
+            for col_index, gun in enumerate(["Pazartesi", "Salı", "Çarşamba", "Perşembe", "Cuma"]):
+                worksheet.write(0, col_index + 1, gun)
 
-            # Eğer bu sınıf için çizelge yoksa sayfayı boş bırak
-            if not sinif_cizelgesi:
-                continue
+            # Saat satır başlıkları
+            for row_index, saat in enumerate(saat_araligi):
+                worksheet.write(row_index + 1, 0, saat)
 
-            # Boş bir pivot tablo oluştur
-            df_pivot = pd.DataFrame(index=saat_araligi, columns=gunler).fillna("")
+            for gun_index, gun in enumerate(["Pazartesi", "Salı", "Çarşamba", "Perşembe", "Cuma"]):
+                if gun in sinif_dersler:
+                    for saat, ders_listesi in sinif_dersler[gun].items():
+                        row_index = saat - 9 + 1  # Saat aralığını satır indeksine çevir
+                        for ders_index, ders in enumerate(ders_listesi):
+                            col_index = gun_index + 1  # Gün sütun indeksine çevir
 
-            for row in sinif_cizelgesi:
-                saat_index = f"{row['saat']}:00-{row['saat'] + 1}:00"
-                ders_bilgisi = (
-                    f"{row['ders_kodu']}\n"
-                    f"{row['derslik']}\n"
-                    f"{row['ogretmen']}"
-                )
-                if row["gun"] in df_pivot.columns and saat_index in df_pivot.index:
-                    df_pivot.loc[saat_index, row["gun"]] = ders_bilgisi
+                            # Sıralı renk seçimi
+                            cell_format = workbook.add_format({
+                                'bg_color': renkler[renk_index % len(renkler)],
+                                'border': 1,
+                                'align': 'center',
+                                'valign': 'vcenter'
+                            })
+                            renk_index += 1
 
-            # Excel sayfasına pivot tabloyu yaz
-            df_pivot.to_excel(writer, sheet_name=f"{sinif}. Sınıf")
-            worksheet = writer.sheets[f"{sinif}. Sınıf"]
-
-            # Hücre formatlarını ayarla
-            cell_format = workbook.add_format({'text_wrap': True, 'align': 'center', 'valign': 'vcenter'})
-            worksheet.set_column('B:F', 20, cell_format)  # Sütun genişliğini ayarla
+                            if ders['sure'] == 3:
+                                worksheet.write(row_index, col_index, f"{ders['ders_kodu']} {ders['ders']}", cell_format)
+                                worksheet.write(row_index + 1, col_index, ders['ogretmen'], cell_format)
+                                worksheet.write(row_index + 2, col_index, f"{ders['derslik']}", cell_format)
+                            elif ders['sure'] == 2:
+                                worksheet.write(row_index, col_index, f"{ders['ders_kodu']} {ders['ders']} - {ders['derslik']}", cell_format)
+                                worksheet.write(row_index + 1, col_index, ders['ogretmen'], cell_format)
+                            elif ders['sure'] == 1:
+                                worksheet.write(row_index, col_index, f"{ders['ders_kodu']} {ders['ders']} -  {ders['derslik']} - {ders['ogretmen']}", cell_format)
 
         writer.close()
         print(f"{dosya_adi} dosyasına yazıldı.")
+
 
 
 if __name__ == '__main__':

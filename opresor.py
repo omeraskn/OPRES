@@ -22,7 +22,7 @@ def ders_cizelgele():
                      if ders["online"] == 0 or derslik["kod"] == "ZOOM": #online dersler sadece zoom dersliğine gider
                         for l, gun in enumerate(gunler):
                             if gun in ogretmen["calisma_gunleri"]:  # Çalışma günü kontrolü
-                                for m in range(len(saatler) - ders["saat"] + 1):
+                                for m in range(len(saatler) - ders["sure"] + 1):
                                     x[i, j, k, l, m] = solver.BoolVar(f'x_{i}_{j}_{k}_{l}_{m}')
 
 
@@ -33,7 +33,7 @@ def ders_cizelgele():
                        for j in range(len(ogretmenler))
                        for k in range(len(derslikler))
                        for l in range(len(gunler))
-                       for m in range(len(saatler) - ders["saat"] + 1)
+                       for m in range(len(saatler) - ders["sure"] + 1)
                        if (i, j, k, l, m) in x) == 1)
 
 
@@ -58,14 +58,15 @@ def ders_cizelgele():
 
 
     # 4. Aynı sınıfın dersleri aynı anda çakışmamalı
-    for sinif in range(1, 5):  # 1'den 4. sınıfa kadar
-        for l, gun in enumerate(gunler):
-            for m in range(len(saatler)):
-                solver.Add(sum(x[i, j, k, l, m]
-                               for i, ders in enumerate(dersler)
-                               for j in range(len(ogretmenler))
-                               for k in range(len(derslikler))
-                               if (i, j, k, l, m) in x and ders["sinif"] == sinif) <= 1)
+    for sinif in range(1, 5):
+      for l, gun in enumerate(gunler):
+          for m in range(len(saatler)):
+              solver.Add(sum(x[i, j, k, l, t]
+                             for i, ders in enumerate(dersler)
+                             for j in range(len(ogretmenler))
+                             for k in range(len(derslikler))
+                             for t in range(max(0,m-ders["sure"]+1), min(len(saatler),m+1))
+                             if (i, j, k, l, t) in x and ders["sinif"] == sinif) <= 1)
 
 
 # 5. Dersin süresi boyunca başka ders atanamaz
@@ -76,7 +77,7 @@ def ders_cizelgele():
                 x[i, j, k, l, t]
                 for i, ders in enumerate(dersler)
                 for j in range(len(ogretmenler))
-                for t in range(max(0, m - ders["saat"] + 1), min(len(saatler) ,m +1 ))
+                for t in range(max(0, m - ders["sure"] + 1), min(len(saatler) ,m +1 ))
                 if (i, j, k, l, t) in x
             ) <= 1)
 
@@ -103,6 +104,7 @@ def ders_cizelgele():
                     "gun": gunler[l],
                     "saat": saatler[m],
                     "sinif": dersler[i]["sinif"],
+                    "sure": dersler[i]["sure"],
                     "ders":dersler[i].get("ders","")
                 })
         return cizelge
